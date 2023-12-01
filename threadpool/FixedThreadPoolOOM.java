@@ -9,12 +9,14 @@ import java.util.concurrent.Executors;
 public class FixedThreadPoolOOM {
 
     private static ExecutorService executorService = Executors.newFixedThreadPool(1);
+
     public static void main(String[] args) {
+        // 因为 newFixedThreadPool 创建的是固定线程池, 并且使用的任务队列是无界队列
+        // 所以在任务过多的时候容易 OOM(out of memory)
         for (int i = 0; i < Integer.MAX_VALUE; i++) {
             executorService.execute(new SubThread());
         }
     }
-
 }
 
 class SubThread implements Runnable {

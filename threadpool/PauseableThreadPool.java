@@ -14,8 +14,11 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class PauseableThreadPool extends ThreadPoolExecutor {
 
+    // 上锁
     private final ReentrantLock lock = new ReentrantLock();
+    //
     private Condition unpaused = lock.newCondition();
+    // 是否处于暂停状态
     private boolean isPaused;
 
 
@@ -44,21 +47,24 @@ public class PauseableThreadPool extends ThreadPoolExecutor {
                 handler);
     }
 
+    // 线程执行任务之前会调用此方法
     @Override
     protected void beforeExecute(Thread t, Runnable r) {
         super.beforeExecute(t, r);
         lock.lock();
         try {
-            while (isPaused) {
+            while(isPaused) {
+                // 调用await()方法后, 当前线程会释放锁并在此 Condition 上等待直到被通知
                 unpaused.await();
             }
-        } catch (InterruptedException e) {
+        } catch(InterruptedException e) {
             e.printStackTrace();
         } finally {
             lock.unlock();
         }
     }
 
+    // 暂停线程池中的线程
     private void pause() {
         lock.lock();
         try {
@@ -68,10 +74,12 @@ public class PauseableThreadPool extends ThreadPoolExecutor {
         }
     }
 
+    // 恢复线程池中的线程
     public void resume() {
         lock.lock();
         try {
             isPaused = false;
+            // 唤醒所有等待在 Condition 上的线程
             unpaused.signalAll();
         } finally {
             lock.unlock();
@@ -92,6 +100,7 @@ public class PauseableThreadPool extends ThreadPoolExecutor {
                 }
             }
         };
+
         for (int i = 0; i < 10000; i++) {
             pauseableThreadPool.execute(runnable);
         }
